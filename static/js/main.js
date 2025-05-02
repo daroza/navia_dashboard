@@ -32,7 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
     status.textContent = 'Prompt enhanced.';
   };
 
-  document.getElementById('generateBtn').onclick = async () => {
+  // Store the last recommended tool globally
+  let lastRecommendedTool = null;
+
+  document.getElementById('routeBtn').onclick = async () => {
     const prompt = document.getElementById('promptInput').value;
     const modality = getModality();
     const routeResult = document.getElementById('routeResult');
@@ -53,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const routeData = await routeRes.json();
       if (routeData.selected_tool) {
+        lastRecommendedTool = routeData.selected_tool;
         let html = `<b>Recommended Tool:</b> ${routeData.selected_tool.ToolName}<br>`;
         html += `<b>Cost:</b> ${routeData.selected_tool.Cost}<br>`;
         if (routeData.selected_tool.ExpectedTime)
@@ -63,15 +67,49 @@ document.addEventListener('DOMContentLoaded', () => {
           html += `<b>Strengths:</b> ${routeData.selected_tool.Strengths}<br>`;
         routeResult.innerHTML = html;
       } else if (routeData.error) {
+        lastRecommendedTool = null;
         routeResult.innerHTML = `<span style='color:red'>Error: ${routeData.error}</span>`;
       } else {
+        lastRecommendedTool = null;
         routeResult.innerHTML = '<span style="color:orange">No tool recommendation received.</span>';
       }
     } catch (err) {
+      lastRecommendedTool = null;
       routeResult.innerHTML = `<span style='color:red'>Error contacting router backend: ${err.message}</span>`;
     }
-    // Do NOT show image previews or update status for Generate
   };
+
+  document.getElementById('generateBtn').onclick = async () => {
+    const routeResult = document.getElementById('routeResult');
+    if (!lastRecommendedTool) {
+      routeResult.innerHTML = '<span style="color:red">No tool has been selected. Please use the Route button first.</span>';
+      return;
+    }
+    // If the tool has an API endpoint, call it; otherwise, provide a link
+    if (lastRecommendedTool.APIEndpoint) {
+      // Example: POST to the tool's API endpoint with the prompt
+      try {
+        const apiRes = await fetch(lastRecommendedTool.APIEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: document.getElementById('promptInput').value })
+        });
+        const apiData = await apiRes.json();
+        routeResult.innerHTML = `<b>Generated Output:</b><br>${JSON.stringify(apiData)}`;
+      } catch (err) {
+        routeResult.innerHTML = `<span style='color:red'>Error calling tool API: ${err.message}</span>`;
+      }
+    } else if (lastRecommendedTool.ToolURL) {
+      routeResult.innerHTML = `<b>No API available. Visit the tool here:</b> <a href="${lastRecommendedTool.ToolURL}" target="_blank">${lastRecommendedTool.ToolName}</a>`;
+    } else {
+      routeResult.innerHTML = `<span style='color:orange'>No API or link available for this tool.</span>`;
+    }
+  };
+
+  document.getElementById('settingsBtn').onclick = () => {
+    alert('Settings dialog coming soon!');
+  };
+
 
 
   document.getElementById('saveBtn').onclick = async () => {
