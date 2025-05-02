@@ -35,17 +35,44 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('generateBtn').onclick = async () => {
     const prompt = document.getElementById('promptInput').value;
     const modality = getModality();
-    status.textContent = 'Generating...';
-    const res = await fetch('/generate', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ prompt, modality })
-    });
-    const data = await res.json();
-    status.textContent = data.message;
-    if (imagePreviews) {
-      imagePreviews.classList.remove('hidden');
+    const routeResult = document.getElementById('routeResult');
+    if (routeResult) routeResult.innerHTML = '';
+    status.textContent = '';
+
+    // Call backend /api/route endpoint to get recommended tool (no JWT needed)
+    try {
+      const routeRes = await fetch('https://daroza-promptified-backend.hf.space/api/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: prompt,
+          media_type: modality === 'auto' ? 'image' : modality, // fallback to image if auto
+          criteria: {},
+          user_id: 'demo'
+        })
+      });
+      const routeData = await routeRes.json();
+      if (routeData.selected_tool) {
+        let html = `<b>Recommended Tool:</b> ${routeData.selected_tool.ToolName}<br>`;
+        html += `<b>Cost:</b> ${routeData.selected_tool.Cost}<br>`;
+        if (routeData.selected_tool.ExpectedTime)
+          html += `<b>Expected Time:</b> ${routeData.selected_tool.ExpectedTime}<br>`;
+        if (routeData.selected_tool.QualityExpectation)
+          html += `<b>Quality:</b> ${routeData.selected_tool.QualityExpectation}<br>`;
+        if (routeData.selected_tool.Strengths)
+          html += `<b>Strengths:</b> ${routeData.selected_tool.Strengths}<br>`;
+        routeResult.innerHTML = html;
+      } else if (routeData.error) {
+        routeResult.innerHTML = `<span style='color:red'>Error: ${routeData.error}</span>`;
+      } else {
+        routeResult.innerHTML = '<span style="color:orange">No tool recommendation received.</span>';
+      }
+    } catch (err) {
+      routeResult.innerHTML = `<span style='color:red'>Error contacting router backend: ${err.message}</span>`;
     }
+    // Do NOT show image previews or update status for Generate
   };
+
 
   document.getElementById('saveBtn').onclick = async () => {
     const original = document.getElementById('promptInput').value;

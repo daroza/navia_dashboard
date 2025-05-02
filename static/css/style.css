@@ -61,9 +61,22 @@ body {
   margin-right: 0.5rem;
 }
 .status {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
   min-height: 1.2em;
+  font-size: 1.1rem;
 }
+
+.route-result {
+  margin-top: 1.2rem;
+  padding: 1rem 1.2rem;
+  background: #f4f8ff;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(80,120,220,0.06);
+  color: #222;
+  font-size: 1.07rem;
+  min-height: 2em;
+}
+
 .image-previews {
   display: flex;
   gap: 2rem;
